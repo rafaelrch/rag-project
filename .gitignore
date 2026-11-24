@@ -10,7 +10,8 @@ wheels/
 .venv
 
 # Vector store gerado
-data/vecto_store/
+data/vector_store/
+faiss_store/
 
 # Variable environments
 .env

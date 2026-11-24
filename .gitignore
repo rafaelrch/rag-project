@@ -11,3 +11,7 @@ wheels/
 
 # Vector store gerado
 data/vecto_store/
+
+# Variable environments
+.env
+.DS_Store

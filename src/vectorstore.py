@@ -5,6 +5,7 @@ import pickle
 from typing import List, Any
 from sentence_transformers import SentenceTransformer
 from src.embedding import EmbeddingPipeline
+from pathlib import Path
 
 class FaissVectorStore:
     def __init__(self, persist_dir: str = "faiss_store", embedding_model: str = "all-MiniLM-L6-v2", chunk_size: int = 1000, chunk_overlap: int = 200):
@@ -23,7 +24,16 @@ class FaissVectorStore:
         emb_pipe = EmbeddingPipeline(model_name=self.embedding_model, chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap)
         chunks = emb_pipe.chunk_documents(documents)
         embeddings = emb_pipe.embed_chunks(chunks)
-        metadatas = [{"text": chunk.page_content} for chunk in chunks]
+        metadatas = []
+
+        for chunk in chunks:
+            source = chunk.metadata.get("source")
+            metadatas.append({
+                "text": chunk.page_content,
+                "source_file": Path(source).name if source else None, 
+                "page": chunk.metadata.get("page"),
+            })
+
         self.add_embeddings(np.array(embeddings).astype('float32'), metadatas)
         self.save()
         print(f"[INFO] Vector Store built and saved to {self.persist_dir}")

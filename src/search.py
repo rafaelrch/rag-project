@@ -11,7 +11,7 @@ class RAGSearch:
         # Load or build vectorstore
         faiss_path = os.path.join(persist_dir, "faiss.index")
         meta_path = os.path.join(persist_dir, "metadata.pkl")
-        if not (os.path.exists(faiss_path)) and (os.path.exists(meta_path)):
+        if not (os.path.exists(faiss_path)) or not (os.path.exists(meta_path)):
             from src.data_loader import load_all_documents
             docs=load_all_documents("data")
             self.vectorstore.build_from_documents(docs)
@@ -23,10 +23,27 @@ class RAGSearch:
 
     def search_and_summarize(self, query: str, top_k: int = 3) -> str:
         results = self.vectorstore.query(query, top_k=top_k)
-        texts = [r["metadata"].get("text", "") for r in results if r["metadata"]]
-        context = "\n\n".join(texts)
-        if not context:
+        collections = []
+
+        for r in results:
+            meta = r["metadata"]
+
+            if not meta:
+                continue
+
+            page = meta.get("page")
+            page_display = page + 1 if page is not None else "N/A"
+
+            collections.append(
+                f"Text: {meta.get('text', '')}\n"
+                f"Source: {meta.get('source_file') or 'N/A'}\n"
+                f"Page: {page_display}"
+            )
+
+        if not collections:
             return "Not relevant documents found."
+        
+        context = "\n\n--------\n\n".join(collections)
         prompt = f"""Summarize the following contexto for the query. Answer in plain text only. Never use LaTeX or Markdown math. \n\n Query:\n'{query}'.\n\nContext: \n{context}.\n\nAnswer:"""
         response = self.llm.invoke([prompt])
         return response.content
